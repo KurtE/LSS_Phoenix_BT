@@ -22,7 +22,7 @@
 //==================================================================================================================================
 //#define USECOMMANDER
 #define USEJOYSTICK		// Use T3.6 or T4.x USB Host control
-//#define BLUETOOTH
+#define BLUETOOTH
 
 #define LSS_SERIAL_PORT     Serial1
 #define LSS_BAUD            250000
@@ -136,15 +136,28 @@ extern ST7789_t3 tft;
 #define cRFTibiaInv 1
 #endif
 #ifdef LYNXMOTION
-#define cRRCoxaInv 	0
-#define cRRFemurInv 0
-#define cRRTibiaInv 0
-#define cRMCoxaInv 	0
-#define cRMFemurInv 0
-#define cRMTibiaInv 0
-#define cRFCoxaInv 	0 
+// Zenta LSS:
+#define cRRCoxaInv 0
+#define cRMCoxaInv 0
+#define cRFCoxaInv 0 
+#define cLFCoxaInv 1 
+#define cLMCoxaInv 1 
+#define cLRCoxaInv 1 
+
+
+#define cRRFemurInv 0 
+#define cRMFemurInv 0 
 #define cRFFemurInv 0 
-#define cRFTibiaInv 0
+#define cLRFemurInv 0 
+#define cLMFemurInv 0 
+#define cLFFemurInv 0 
+
+#define cRRTibiaInv 0 
+#define cRMTibiaInv 0 
+#define cRFTibiaInv 0 
+#define cLRTibiaInv 0 
+#define cLMTibiaInv 0 
+#define cLFTibiaInv 0 
 #endif
 
 #ifdef MXPhoenix //Compared to the PhantomX MKI the Femur and Tibia must be reversed
@@ -304,7 +317,7 @@ extern ST7789_t3 tft;
 #ifdef LYNXMOTION
 #define cXXTibiaMin1    -60
 #define cXXTibiaMax1     75
-#define cXXFemurMin		-90
+#define cXXFemurMin		-120
 #define cXXFemurMax		 90
 #define cXXCoxaMin		-75
 #define cXXCoxaMax		 75
@@ -439,7 +452,7 @@ extern ST7789_t3 tft;
 //[LEG DIMENSIONS]
 //Universal dimensions for each leg in mm
 #ifdef LYNXMOTION
-#define cXXCoxaLength     51    // 50.8 to be exact
+#define cXXCoxaLength     54    // 50.8 to be exact
 #define cXXFemurLength    80    // 80.32mm to be exact
 #define cXXTibiaLength    116  //116.24 from drawing
 #endif
@@ -608,10 +621,10 @@ extern ST7789_t3 tft;
 //--------------------------------------------------------------------
 //[START POSITIONS FEET]
 #ifdef LYNXMOTION
-#define cHexInitXZ   131
-#define CHexInitXZCos60  73    // COS(56) = .707
-#define CHexInitXZSin60  109    // sin(56) = .707
-#define CHexInitY  30 //116 //30
+#define cHexInitXZ   145
+#define CHexInitXZCos60  81    // COS(56) = .707
+#define CHexInitXZSin60  120    // sin(56) = .707
+#define CHexInitY  14 //116 //30
 #define cHexGroundPos 25
 #endif
 

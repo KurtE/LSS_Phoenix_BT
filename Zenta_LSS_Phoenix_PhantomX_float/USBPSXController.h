@@ -59,6 +59,8 @@ class USBPSXController : public InputController
 		BUT_HAT_UP, BUT_HAT_DOWN, BUT_HAT_LEFT, BUT_HAT_RIGHT
 	};
 	enum { AXIS_LX, AXIS_LY, AXIS_RX, AXIS_LT, AXIS_RT, AXIS_RY };  // Order of PS3
+	enum {cTravelDeadZone = 6 };      //The deadzone for the analog input from the remote
+
 
 	private:
 		float   _bodyYOffset; //Relative body height position (offset)

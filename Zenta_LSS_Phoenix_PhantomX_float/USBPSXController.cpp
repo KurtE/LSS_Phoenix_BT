@@ -36,7 +36,7 @@
 
 //[CONSTANTS]
 enum {
-	WALKMODE = 0, //TRANSLATEMODE, ROTATEMODE, //Only two modes, walk and single leg
+	WALKMODE = 0, TRANSLATEMODE, ROTATEMODE, //Only two modes, walk and single leg
 #ifdef OPT_SINGLELEG
 	SINGLELEGMODE,
 #endif
@@ -206,6 +206,432 @@ void USBPSXController::AllowControllerInterrupts(boolean fAllow)
 // This is The main code to input function to read inputs from the Commander and then
 //process any commands.
 //==============================================================================
+#if 1 
+void USBPSXController::ControlInput(void)
+{
+	// try the one direct from LSS_Phoenix_USB_joystick.cpp in Test stuff.
+	// Make sure USB gets chance to process stuff. 
+	myusb.Task();
+	// check to see if the device list has changed:
+	UpdateActiveDeviceInfo();
+	//  processPS3MotionTimer();  - not sure yet support this yet. 
+
+	if (joystick1.available()) {
+		if (_first_joystick_message) {
+			Serial.printf("*** First Joystick message %x:%x ***\n",
+				joystick1.idVendor(), joystick1.idProduct());
+			_first_joystick_message = false;
+
+			const uint8_t* psz = joystick1.manufacturer();
+			if (psz && *psz) Serial.printf("  manufacturer: %s\n", psz);
+			const uint8_t* pszProduct = joystick1.product();
+			if (pszProduct && *pszProduct) Serial.printf("  product: %s\n", pszProduct);
+			psz = joystick1.serialNumber();
+			if (psz && *psz) Serial.printf("  Serial: %s\n", psz);
+
+			if (pszProduct && strncmp((const char *)pszProduct, "Wireless Controller", 19) == 0) {
+				BTN_MASKS = PS4_BTNS;
+				if (bluet) {
+					joystick_ps4_bt = true;
+					DBGSerial.println("      BlueTooth PS4");					
+				} else {
+					DBGSerial.println("      Wired PS4");					
+				}
+			}
+
+			// lets try to reduce number of fields that update
+			joystick1.axisChangeNotifyMask(0xFFFFFl);
+		}
+
+		// If we receive a valid message than turn robot on...
+		boolean fAdjustLegPositions = false;
+		short sLegInitXZAdjust = 0;
+		short sLegInitAngleAdjust = 0;
+
+#if 0
+		if (!g_InControlState.fRobotOn) {
+			g_InControlState.fRobotOn = true;
+			fAdjustLegPositions = true;
+		}
+#endif
+		// [SWITCH MODES]
+		_buttons = joystick1.getButtons();
+#if defined(BLUETOOTH)
+		if (joystick_ps4_bt || joystick1.joystickType() == JoystickController::PS4) {
+			int hat = joystick_ps4_bt? joystick1.getAxis(10) : joystick1.getAxis(9);  // get hat - up/dwn buttons
+#else
+		if (joystick1.joystickType() == JoystickController::PS4) {
+			int hat = joystick1.getAxis(9);  // get hat - up/dwn buttons
+#endif
+			if ((hat >= 0) && (hat < 8)) _buttons |= PS4_MAP_HAT_MAP[hat];
+			BTN_MASKS = PS4_BTNS;	// should have been set earlier, but just in case...
+		}
+		else {
+			BTN_MASKS = PS3_BTNS;
+		}
+
+#if defined(BLUETOOTH)
+		if ((_buttons & BTN_MASKS[BUT_PS3]) && !(_buttons_prev & BTN_MASKS[BUT_PS3])) {
+			if ((joystick1.joystickType() == JoystickController::PS3) &&
+				(_buttons & (BTN_MASKS[BUT_L1] | BTN_MASKS[BUT_R1]))) {
+				// PS button just pressed and select button pressed act like PS4 share like...
+				// Note: you can use either R1 or L1 with the PS button, to work with Sony Move Navigation...
+				Serial.print("\nPS3 Pairing Request");
+				if (!_last_bdaddr[0] && !_last_bdaddr[1] && !_last_bdaddr[2] && !_last_bdaddr[3] && !_last_bdaddr[4] && !_last_bdaddr[5]) {
+					Serial.println(" - failed - no Bluetooth adapter has been plugged in");
+				}
+				else if (!hiddrivers[0]) {  // Kludge see if we are connected as HID?
+					Serial.println(" - failed - PS3 device not plugged into USB");
+				}
+				else {
+					Serial.printf(" - Attempt pair to: %x:%x:%x:%x:%x:%x\n", _last_bdaddr[0], _last_bdaddr[1], _last_bdaddr[2], _last_bdaddr[3], _last_bdaddr[4], _last_bdaddr[5]);
+
+					if (!joystick1.PS3Pair(_last_bdaddr)) {
+						Serial.println("  Pairing call Failed");
+					}
+					else {
+						Serial.println("  Pairing complete (I hope), make sure Bluetooth adapter is plugged in and try PS3 without USB");
+					}
+				}
+			} else {
+				// Maybe lets toggle the 
+				if (!g_InControlState.fRobotOn) {
+					g_InControlState.fRobotOn = true;
+					fAdjustLegPositions = true;
+					Serial.println("Robot Power On.....");
+				}
+				else {
+					controllerTurnRobotOff();
+					Serial.println("Robot Power Off.....");
+				}
+			}
+		}
+#else
+		if ((_buttons & BTN_MASKS[BUT_PS3]) && !(_buttons_prev & BTN_MASKS[BUT_PS3])) {
+				if (!g_InControlState.fRobotOn) {
+					g_InControlState.fRobotOn = true;
+					fAdjustLegPositions = true;
+					g_InControlState.ForceSlowCycleWait = 2;//Do this action slowly..
+					g_WakeUpState = true;//Start the wakeup routine
+					Serial.println("Robot Power On.....");
+				}
+				else {
+					controllerTurnRobotOff();
+					Serial.println("Robot Power Off.....");
+				}
+		}
+#endif
+
+		// Cycle through modes...
+		if ((_buttons & BTN_MASKS[BUT_TRI]) && !(_buttons_prev & BTN_MASKS[BUT_TRI])) {
+			if (++_controlMode >= MODECNT) {
+				_controlMode = WALKMODE;    // cycled back around...
+				MSound(2, 50, 2000, 50, 3000);
+			}
+			else {
+				MSound(1, 50, 2000);
+			}
+#ifdef OPT_SINGLELEG      
+			if (_controlMode != SINGLELEGMODE)
+				g_InControlState.SelectedLeg = 255;
+			else {
+				g_InControlState.SelectedLeg = 5;   // Select leg 5 (LF) when we go into this mode. 
+				//g_InControlState.PrevSelectedLeg = 255;
+#ifdef DEBUG_SINGLELEG
+				Serial.println("Single Leg Mode .....");
+#endif
+			}
+#endif
+			// If we have display display new mode
+#ifdef USE_ST7789
+			tft.setCursor(0, TFT_Y_MODE);
+			tft.setTextSize(2);
+			tft.setTextColor(ST77XX_WHITE, ST77XX_RED);
+			tft.print(mode_names[_controlMode]);
+			tft.fillRect(tft.getCursorX(), tft.getCursorY(), tft.width(), 15, ST77XX_RED);
+#endif
+			Serial.println(mode_names[_controlMode]);
+
+		}
+
+		//[Common functions]
+		//Switch Balance mode on/off 
+		if ((_buttons & BTN_MASKS[BUT_SQ]) && !(_buttons_prev & BTN_MASKS[BUT_SQ])) {
+			g_InControlState.BalanceMode = !g_InControlState.BalanceMode;
+			if (g_InControlState.BalanceMode) {
+				MSound(1, 250, 1500);
+				Serial.println("Balance Mode: On ........");
+			}
+			else {
+				MSound(2, 100, 2000, 50, 4000);
+				Serial.println("Balance Mode: Off ........");
+			}
+
+		}
+
+		//Stand up, sit down  
+		if ((_buttons & BTN_MASKS[BUT_HAT_DOWN]) && !(_buttons_prev & BTN_MASKS[BUT_HAT_DOWN])) {
+			_bodyYOffset = 0;
+			Serial.println("Sitting ........");
+		}
+		if ((_buttons & BTN_MASKS[BUT_HAT_UP]) && !(_buttons_prev & BTN_MASKS[BUT_HAT_UP])) {
+			if (_bodyYOffset < 35) _bodyYOffset = 35;
+			else _bodyYOffset += 10;
+			if (_bodyYOffset > MAX_BODY_Y) _bodyYOffset = MAX_BODY_Y;
+			fAdjustLegPositions = true;
+			_fDynamicLegXZLength = false;
+			Serial.println("Ready for Action ........");
+		}
+
+		// We will use L1 with the Right joystick to control both body offset as well as Speed...
+		// We move each pass through this by a percentage of how far we are from center in each direction
+		// We get feedback with height by seeing the robot move up and down.  For Speed, I put in sounds
+		// which give an idea, but only for those whoes robot has a speaker
+		int lx = joystick1.getAxis(AXIS_LX) - 127;
+		int ly = joystick1.getAxis(AXIS_LY) - 127;
+		int rx = joystick1.getAxis(AXIS_RX) - 127;
+		int ry = joystick1.getAxis(AXIS_RY) - 127;
+		if (_fDebugJoystick) {
+			Serial.printf("(%d)BTNS: %x LX: %d, LY: %d, RX: %d, RY: %d LT: %d RT: %d\r\n", joystick1.joystickType(), _buttons,
+				lx, ly, rx, ry, joystick1.getAxis(AXIS_LT), joystick1.getAxis(AXIS_RT));
+		}
+
+		if (_buttons & BTN_MASKS[BUT_L1] && !(_buttons_prev & BTN_MASKS[BUT_L1])) {
+			Serial.println("Adjusting up/down (Ry) /speed (Rx) ........");
+			// raise or lower the robot on the joystick up /down
+			// Maybe should have Min/Max
+			int delta = ry / 25;
+			if (delta) {
+				_bodyYOffset = max(min(_bodyYOffset + delta, MAX_BODY_Y), 0);
+				fAdjustLegPositions = true;
+			}
+
+			// Also use right Horizontal to manually adjust the initial leg positions.
+			sLegInitXZAdjust = lx / 10;        // play with this.
+			sLegInitAngleAdjust = ly / 8;
+			lx = 0;
+			ly = 0;
+
+			// Likewise for Speed control
+			delta = rx / 16;   // 
+			if ((delta < 0) && g_InControlState.SpeedControl) {
+				if ((word)(-delta) < g_InControlState.SpeedControl)
+					g_InControlState.SpeedControl += delta;
+				else
+					g_InControlState.SpeedControl = 0;
+				MSound(1, 50, 1000 + g_InControlState.SpeedControl);
+			}
+			if ((delta > 0) && (g_InControlState.SpeedControl < 2000)) {
+				g_InControlState.SpeedControl += delta;
+				if (g_InControlState.SpeedControl > 2000)
+					g_InControlState.SpeedControl = 2000;
+				MSound(1, 50, 1000 + g_InControlState.SpeedControl);
+			}
+
+			rx = 0; // don't walk when adjusting the speed here...
+		}
+
+#ifdef DBGSerial
+		if ((_buttons & BTN_MASKS[BUT_X]) && !(_buttons_prev & BTN_MASKS[BUT_X])) {
+			MSound(1, 50, 2000);
+			_fDebugJoystick = !_fDebugJoystick;
+		}
+		if ((_buttons & BTN_MASKS[BUT_L3]) && !(_buttons_prev & BTN_MASKS[BUT_L3])) {
+			MSound(1, 50, 2000);
+#if defined(TEENSY_DEBUG_H)
+			if (debug.isGDBConnected()) {
+				DBGSerial.println(F("Trying to break in to GDB"));
+				// lets try it through setting breakpoint at loop
+				debug.setBreakpoint((void*)&loop);
+				//halt();
+			}
+			else
+#endif
+			{
+				g_fDebugOutput = !g_fDebugOutput;
+				if (g_fDebugOutput) DBGSerial.println(F("Debug is on"));
+				else DBGSerial.println(F("Debug is off"));
+			}
+
+		}
+#endif    
+		//[Walk functions]
+		if (_controlMode == WALKMODE) {
+			//Switch Gaits
+			if (((_buttons & BTN_MASKS[BUT_SELECT]) && !(_buttons_prev & BTN_MASKS[BUT_SELECT]))
+				&& abs(g_InControlState.TravelLength.x) < cTravelDeadZone //No movement
+				&& abs(g_InControlState.TravelLength.z) < cTravelDeadZone
+				&& abs(g_InControlState.TravelLength.y * 2) < cTravelDeadZone) {
+				g_InControlState.GaitType = g_InControlState.GaitType + 1;                    // Go to the next gait...
+				if (g_InControlState.GaitType < NumOfGaits) {                 // Make sure we did not exceed number of gaits...
+					MSound(1, 50, 2000);
+				}
+				else {
+					MSound(2, 50, 2000, 50, 2250);
+					g_InControlState.GaitType = 0;
+				}
+				strcpy(g_InControlState.DataPack, (const char *)Gait_table[g_InControlState.GaitType]);
+				g_InControlState.DataMode = 1;
+				g_InControlState.lWhenWeLastSetDatamode = millis();
+				Serial.printf("Gait Selected: %s\n", (const char *)Gait_table[g_InControlState.GaitType]) ;
+				//GaitSelect();
+			}
+ 
+			//Double leg lift height
+			if ((_buttons & BTN_MASKS[BUT_R2]) && !(_buttons_prev & BTN_MASKS[BUT_R2])) {
+				MSound(1, 50, 2000);
+				_heightSpeedMode = (_heightSpeedMode + 1) & 0x3; // wrap around mode
+				_doubleTravelOn = _heightSpeedMode & 0x1;
+				if (_heightSpeedMode & 0x2) {
+					g_InControlState.LegLiftHeight = 80;
+					Serial.println("Double Leg Height Selected .....");
+				} else {
+					g_InControlState.LegLiftHeight = 50;
+					Serial.println("Normal Leg Height Selected .....");
+				}
+			}
+
+			// Switch between Walk method 1 && Walk method 2
+			if ((_buttons & BTN_MASKS[BUT_CIRC]) && !(_buttons_prev & BTN_MASKS[BUT_CIRC])) {
+#ifdef cTurretRotPin
+				if ((++_bJoystickWalkMode) > 2)
+#else
+				if ((++_bJoystickWalkMode) > 1)
+#endif 
+					_bJoystickWalkMode = 0;
+				MSound(1, 50, 2000 + _bJoystickWalkMode * 250);
+				Serial.printf("Walkmethod %d Selected ........\n", _bJoystickWalkMode );
+			}
+
+			//Walking
+			switch (_bJoystickWalkMode) {
+			case 0:
+				g_InControlState.TravelLength.x = -lx;
+				g_InControlState.TravelLength.z = -ly;
+				g_InControlState.TravelLength.y = -(rx) / 4; //Right Stick Left/Right 
+				break;
+			case 1:
+				g_InControlState.TravelLength.z = (joystick1.getAxis(AXIS_RY)); //Right Stick Up/Down  
+				g_InControlState.TravelLength.y = -(rx) / 4; //Right Stick Left/Right 
+				break;
+#ifdef cTurretRotPin
+			case 2:
+				g_InControlState.TravelLength.x = -lx;
+				g_InControlState.TravelLength.z = -ly;
+
+				// Will use Right now stick to control turret.
+				g_InControlState.TurretRotAngle1 = max(min(g_InControlState.TurretRotAngle1 + rx / 5, cTurretRotMax1), cTurretRotMin1);      // Rotation of turret in 10ths of degree
+				g_InControlState.TurretTiltAngle1 = max(min(g_InControlState.TurretTiltAngle1 + joystick1.getAxis(AXIS_RY) / 5, cTurretTiltMax1), cTurretTiltMin1);  // tilt of turret in 10ths of degree
+#endif
+			}
+
+			if (!_doubleTravelOn) {  //(Double travel length)
+				g_InControlState.TravelLength.x = g_InControlState.TravelLength.x / 2;
+				g_InControlState.TravelLength.z = g_InControlState.TravelLength.z / 2;
+			}
+
+		}
+
+		//[Translate functions]
+		_bodyYShift = 0;
+		if (_controlMode == TRANSLATEMODE) {
+			g_InControlState.BodyPos.x = SmoothControl(((lx) * 2 / 3), g_InControlState.BodyPos.x, SmDiv);
+			g_InControlState.BodyPos.z = SmoothControl(((ly) * 2 / 3), g_InControlState.BodyPos.z, SmDiv);
+			g_InControlState.BodyRot1.y = SmoothControl(((rx) * 2), g_InControlState.BodyRot1.y, SmDiv);
+
+			//      g_InControlState.BodyPos.x = (lx)/2;
+			//      g_InControlState.BodyPos.z = -(ly)/3;
+			//      g_InControlState.BodyRot1.y = (rx)*2;
+			_bodyYShift = (-(joystick1.getAxis(AXIS_RY)-127) / 2); //Zenta should be joystick1.getAxis(AXIS_RY) - 127
+		}
+
+		//[Rotate functions]
+		if (_controlMode == ROTATEMODE) {
+			g_InControlState.BodyRot1.x = (ly);
+			g_InControlState.BodyRot1.y = (rx) * 2;
+			g_InControlState.BodyRot1.z = (lx);
+			_bodyYShift = (-(joystick1.getAxis(AXIS_RY)-127) / 2); //Zenta Should be -127 or just replace with ry
+		}
+		//[Single leg functions]
+#ifdef OPT_SINGLELEG      
+		if (_controlMode == SINGLELEGMODE) {
+			//Switch leg for single leg control
+			if ((_buttons & BTN_MASKS[BUT_SELECT]) && !(_buttons_prev & BTN_MASKS[BUT_SELECT])) {
+				MSound(1, 50, 2000);
+				if (g_InControlState.SelectedLeg < (CNT_LEGS - 1)) {
+					g_InControlState.SelectedLeg = g_InControlState.SelectedLeg + 1;
+					Serial.printf("Leg #%d Selected .....\n", g_InControlState.SelectedLeg);
+				} else {
+					g_InControlState.SelectedLeg = 0;
+				}
+			}
+
+#if 0
+			g_InControlState.SLLeg.x = (signed char)((int)((int)lx + 128) / 2); //Left Stick Right/Left
+			g_InControlState.SLLeg.y = (signed char)((int)((int)joystick1.getAxis(AXIS_RY) + 128) / 10); //Right Stick Up/Down
+			g_InControlState.SLLeg.z = (signed char)((int)((int)ly + 128) / 2); //Left Stick Up/Down
+#else
+			// BUGBUG:: Need to figure out a decent range for these values... 
+			g_InControlState.SLLeg.x = lx; //Left Stick Right/Left
+			g_InControlState.SLLeg.y = joystick1.getAxis(AXIS_RY) / 3 - 20; //Right Stick Up/Down
+			g_InControlState.SLLeg.z = ly; //Left Stick Up/Down
+#endif
+#ifdef DEBUG_SINGLELEG
+			Serial.print(g_InControlState.SLLeg.x, DEC);
+			Serial.print(",");
+			Serial.print(g_InControlState.SLLeg.y, DEC);
+			Serial.print(",");
+			Serial.println(g_InControlState.SLLeg.z, DEC);
+#endif
+			// Hold single leg in place
+			if ((_buttons & BTN_MASKS[BUT_R1]) && !(_buttons_prev & BTN_MASKS[BUT_R1])) {
+				MSound(1, 50, 2000);
+				g_InControlState.fSLHold = !g_InControlState.fSLHold;
+				Serial.println("Holding selected leg in position ...........");
+			}
+		}
+#endif
+
+		//Calculate walking time delay
+		g_InControlState.InputTimeDelay = 128 - max(max(abs(lx), abs(ly)), abs(rx));
+
+		//Calculate g_InControlState.BodyPos.y
+		g_InControlState.BodyPos.y = max(_bodyYOffset + _bodyYShift, 0);
+
+		if (sLegInitXZAdjust || sLegInitAngleAdjust) {
+			// User asked for manual leg adjustment - only do when we have finished any previous adjustment
+
+			if (!g_InControlState.ForceGaitStepCnt) {
+				if (sLegInitXZAdjust)
+					_fDynamicLegXZLength = true;
+
+				sLegInitXZAdjust += GetLegsXZLength();  // Add on current length to our adjustment...
+				// Handle maybe change angles...
+				if (sLegInitAngleAdjust)
+					RotateLegInitAngles(sLegInitAngleAdjust);
+
+				// Give system time to process previous calls
+				AdjustLegPositions(sLegInitXZAdjust);
+			}
+		}
+
+		if (fAdjustLegPositions && !_fDynamicLegXZLength)
+			AdjustLegPositionsToBodyHeight();    // Put main workings into main program file
+
+		  // Save away the buttons state as to not process the same press twice.
+		_buttons_prev = _buttons;
+		_ulLastMsgTime = millis();
+	}
+	else {
+		// We did not receive a valid packet.  check for a timeout to see if we should turn robot off...
+		if (g_InControlState.fRobotOn) {
+			if (!joystick1)
+				controllerTurnRobotOff();
+		}
+	}
+}
+
+#else
 void USBPSXController::ControlInput(void)
 {
 	// See if we have a new command available...
@@ -359,7 +785,7 @@ void USBPSXController::ControlInput(void)
 				}
 #ifdef OPT_SINGLELEG
 				if (_controlMode == SINGLELEGMODE) {
-					g_InControlState.SelectedLeg = 2;//Zenta made the front right as default at start
+					g_InControlState.SelectedLeg = 5;//Zenta made the front right as default at start
 					strcpy(g_InControlState.DataPack, "Single LT=Hld L6=Tgl");
 				}
 #endif
@@ -728,6 +1154,7 @@ void USBPSXController::ControlInput(void)
 		}
 	}
 }
+#endif
 
 //==============================================================================
 // CommanderTurnRobotOff - code used couple of places so save a little room...

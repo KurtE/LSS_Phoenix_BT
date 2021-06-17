@@ -1085,14 +1085,14 @@ void StartUpdateServos()
         cTibiaInv[LegIndex]? -TibiaAngle[LegIndex] : TibiaAngle[LegIndex], 
         cTarsInv[LegIndex]? -TarsAngle[LegIndex] : TarsAngle[LegIndex]);
 #else
-			/*CoxaAngle[LegIndex] = (cCoxaInv[LegIndex] ? -CoxaAngle[LegIndex] : CoxaAngle[LegIndex]);
+			CoxaAngle[LegIndex] = (cCoxaInv[LegIndex] ? -CoxaAngle[LegIndex] : CoxaAngle[LegIndex]);
 			FemurAngle[LegIndex] = (cFemurInv[LegIndex] ? -FemurAngle[LegIndex] : FemurAngle[LegIndex]);
 			TibiaAngle[LegIndex] = (cTibiaInv[LegIndex] ? -TibiaAngle[LegIndex] : TibiaAngle[LegIndex]);
-			ServoDriver::driver()->OutputServoInfoForLeg(LegIndex, CoxaAngle[LegIndex], FemurAngle[LegIndex], TibiaAngle[LegIndex]); */
-    ServoDriver::driver()->OutputServoInfoForLeg(LegIndex, 
+			ServoDriver::driver()->OutputServoInfoForLeg(LegIndex, CoxaAngle[LegIndex], FemurAngle[LegIndex], TibiaAngle[LegIndex]);
+    /*ServoDriver::driver()->OutputServoInfoForLeg(LegIndex, 
         cCoxaInv[LegIndex]? -CoxaAngle[LegIndex] : CoxaAngle[LegIndex], 
         cFemurInv[LegIndex]? -FemurAngle[LegIndex] : FemurAngle[LegIndex], 
-        cTibiaInv[LegIndex]? -TibiaAngle[LegIndex] : TibiaAngle[LegIndex]);
+        cTibiaInv[LegIndex]? -TibiaAngle[LegIndex] : TibiaAngle[LegIndex]); */
 #endif      
   }
 #ifdef cTurretRotPin
@@ -2362,7 +2362,7 @@ void LegIK (float feetPosX, float feetPosY, float feetPosZ, int legIndex)
 #endif
 
   
-#ifdef DEBUG
+#ifdef DEBUG_VERBOSE
   if (g_fDebugOutput && (g_InControlState.fRobotOn || g_InControlState.fPrev_RobotOn)) {
     DBGSerial.print("(");
     DBGSerial.print(feetPosX, 4);
