@@ -22,6 +22,7 @@
 //#define USECOMMANDER
 #define USEJOYSTICK		// Use T3.6 or T4.x USB Host control
 //#define BLUETOOTH
+//#define USELSSCONFIG
 
 #define LSS_SERIAL_PORT     Serial1
 #define LSS_BAUD            250000
@@ -59,18 +60,28 @@ extern ST7789_t3 tft;
 // Define other optional compnents to be included or not...
 //#define cFemurHornOffset1 -35
 //#define cTibiaHornOffset1 463
-// Coxa may be reversed from default
+// Zenta LSS:
 #define cRRCoxaInv 0
-#define cRRFemurInv 0
-#define cRRTibiaInv 0
-
 #define cRMCoxaInv 0
-#define cRMFemurInv 0
-#define cRMTibiaInv 0
-
 #define cRFCoxaInv 0 
+#define cLFCoxaInv 1 
+#define cLMCoxaInv 1 
+#define cLRCoxaInv 1 
+
+
+#define cRRFemurInv 0 
+#define cRMFemurInv 0 
 #define cRFFemurInv 0 
-#define cRFTibiaInv 0
+#define cLRFemurInv 0 
+#define cLMFemurInv 0 
+#define cLFFemurInv 0 
+
+#define cRRTibiaInv 0 
+#define cRMTibiaInv 0 
+#define cRFTibiaInv 0 
+#define cLRTibiaInv 0 
+#define cLMTibiaInv 0 
+#define cLFTibiaInv 0 
 
 /* I think femur directions are same as default
 #define cRRFemurInv 1 
@@ -96,6 +107,93 @@ extern ST7789_t3 tft;
 #define cLRTibiaInv 1 
 #define cLMTibiaInv 1 
 #define cLFTibiaInv 1 
+*/
+
+//==================================================================
+// Define 0 position servo offsets
+//===================================================================
+// Zenta LSS:
+
+#define cRRCoxaOff	0
+#define cRMCoxaOff	0
+#define cRFCoxaOff  0 
+#define cLFCoxaOff  0 
+#define cLMCoxaOff  0 
+#define cLRCoxaOff  0
+
+#define cRRFemurOff -155 
+#define cRMFemurOff -157 
+#define cRFFemurOff -168 
+#define cLRFemurOff -232 
+#define cLMFemurOff -181 
+#define cLFFemurOff -169 
+
+#define cRRTibiaOff -172 
+#define cRMTibiaOff -192 
+#define cRFTibiaOff -174 
+#define cLRTibiaOff -162 
+#define cLMTibiaOff -180 
+#define cLFTibiaOff -168
+/*
+// MJS LSS:
+#define cRRCoxaOff	0
+#define cRMCoxaOff	0
+#define cRFCoxaOff  0 
+#define cLFCoxaOff  0 
+#define cLMCoxaOff  0 
+#define cLRCoxaOff  0
+
+#define cRRFemurOff -104 
+#define cRMFemurOff -104 
+#define cRFFemurOff -104   //mjs rf leg 
+#define cLRFemurOff -104 
+#define cLMFemurOff -104 
+#define cLFFemurOff -104 
+
+#define cRRTibiaOff -137 
+#define cRMTibiaOff -137 
+#define cRFTibiaOff -137   //mjs rf leg  
+#define cLRTibiaOff -137 
+#define cLMTibiaOff -137 
+#define cLFTibiaOff -137
+*/
+
+//===================================================================
+// Define Servo Gyre (left side CCW, Right side CW)
+// Zenta LSS:
+#define cRRCoxaGyre LSS_GyreCounterClockwise
+#define cRMCoxaGyre LSS_GyreCounterClockwise
+#define cRFCoxaGyre LSS_GyreCounterClockwise 
+#define cLFCoxaGyre LSS_GyreClockwise 
+#define cLMCoxaGyre LSS_GyreClockwise 
+#define cLRCoxaGyre LSS_GyreClockwise 
+
+#define cRRFemurGyre LSS_GyreCounterClockwise 
+#define cRMFemurGyre LSS_GyreCounterClockwise 
+#define cRFFemurGyre LSS_GyreCounterClockwise 
+#define cLRFemurGyre LSS_GyreClockwise 
+#define cLMFemurGyre LSS_GyreClockwise 
+#define cLFFemurGyre LSS_GyreClockwise 
+
+#define cRRTibiaGyre LSS_GyreCounterClockwise 
+#define cRMTibiaGyre LSS_GyreCounterClockwise 
+#define cRFTibiaGyre LSS_GyreCounterClockwise
+#define cLRTibiaGyre LSS_GyreClockwise 
+#define cLMTibiaGyre LSS_GyreClockwise 
+#define cLFTibiaGyre LSS_GyreClockwise
+
+#define cServoSpeed	 600
+
+/* Reminder of whats needed - temporary
+leg_info_t legs[] = {
+{“Left Front”, {cLFCoxaPin, LSS_GyreClockwise, 0, 600}, {cLFFemurPin, LSS_GyreClockwise, -169, 600}, {cLFTibiaPin, LSS_GyreClockwise,-168, 600}},
+{“Left Middle”, {cLMCoxaPin, LSS_GyreClockwise, 0, 600}, {cLMFemurPin, LSS_GyreClockwise, -181, 600}, {cLMTibiaPin, LSS_GyreClockwise, -180, 600}},
+{“Left Rear”, {cLRCoxaPin, LSS_GyreClockwise, 0, 600}, {cLRFemurPin, LSS_GyreClockwise, -232, 600}, {cLRTibiaPin, LSS_GyreClockwise, -162, 600}},
+
+{“Right Front”, {cRFCoxaPin, LSS_GyreCounterClockwise, 0, 600}, {cRFFemurPin, LSS_GyreCounterClockwise, -168, 600}, {cRFTibiaPin, LSS_GyreCounterClockwise, -174, 600}},
+{“Right Middle”, {cRMCoxaPin, LSS_GyreCounterClockwise, 0, 600}, {cRMFemurPin, LSS_GyreCounterClockwise, -157, 600}, {cRMTibiaPin, LSS_GyreCounterClockwise, -192, 600}},
+{“Right Rear”, {cRRCoxaPin, LSS_GyreCounterClockwise, 0, 600}, {cRRFemurPin, LSS_GyreCounterClockwise, -155, 600}, {cRRTibiaPin, LSS_GyreCounterClockwise, -172, 600}}
+};
 */
 
 //===================================================================
@@ -269,7 +367,7 @@ extern ST7789_t3 tft;
 //--------------------------------------------------------------------
 //[LEG DIMENSIONS]
 //Universal dimensions for each leg in mm
-#define cXXCoxaLength     51    // 50.8 to be exact
+#define cXXCoxaLength     54    //Zenta measured about 54mm // 50.8 to be exact
 #define cXXFemurLength    80    // 80.32mm to be exact
 #define cXXTibiaLength    116  //116.24 from drawing
 
@@ -314,10 +412,11 @@ extern ST7789_t3 tft;
 #define cLMCoxaAngle1    0      //Default Coxa setup angle
 #define cLFCoxaAngle1    560     //Default Coxa setup angle
 
+/*Zenta Not used
 #define X_COXA      89  // MM between front and back legs /2  ???????????
 #define Y_COXA      89  // MM between front/back legs /2   ????????????????????????????
 #define M_COXA      61  // MM between two middle legs /2   ????????????????????????????
-
+*/
 #define cRROffsetX      -61    //Distance X from center of the body to the Right Rear coxa
 #define cRROffsetZ       89     //Distance Z from center of the body to the Right Rear coxa
 
@@ -337,10 +436,12 @@ extern ST7789_t3 tft;
 #define cLFOffsetZ      -89    //Distance Z from center of the body to the Left Front coxa
 //--------------------------------------------------------------------
 //[START POSITIONS FEET]
-#define cHexInitXZ   131
-#define CHexInitXZCos60  73    // COS(56) = .707
-#define CHexInitXZSin60  109    // sin(56) = .707
-#define CHexInitY  116 //30
+// Zenta
+
+#define cHexInitXZ   145 //Zenta 145 //131
+#define CHexInitXZCos60  81    // COS(56) = .559
+#define CHexInitXZSin60  120    // sin(56) = .829
+#define CHexInitY  14 //Zenta About 14mm is correct //116 //30
 
 
 // Lets try some multi leg positions depending on height settings.

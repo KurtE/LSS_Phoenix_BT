@@ -2639,7 +2639,7 @@ void AdjustLegPositionsToBodyHeight()
 void SoundNoTimer(unsigned long duration,  unsigned int frequency)
 {
 
-#if ! defined(KINETISK) && ! defined(__IMXRT1062__)
+#if !(defined(KINETISK) || defined(__IMXRT1062__))
 
 #ifdef __AVR__
   volatile uint8_t *pin_port;

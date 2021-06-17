@@ -325,6 +325,7 @@ void LSSServoDriver::OutputServoInfoForLeg(byte LegIndex, short sCoxaAngle1, sho
 #ifdef c4DOF
 	g_awGoalAXTarsPos[FIRSTTARSPIN + LegIndex] = sTarsAngle1;
 #endif
+
 #ifdef DEBUG_SERVOS
 	if (g_fDebugOutput) {
 		DBGSerial.print(LegIndex, DEC);
@@ -543,6 +544,8 @@ void LSSServoDriver::MakeSureServosAreOn(void)
 //==============================================================================
 void  LSSServoDriver::BackgroundProcess(void)
 {
+	if (!use_servos_timed_moves)
+		TMStep(false); // force the first step..
 #ifdef cTurnOffVol          // only do if we a turn off voltage is defined
 #ifndef cVoltagePin         // and we are not doing AtoD type of conversion...
 	if (iTimeToNextInterpolate > VOLTAGE_MIN_TIME_UNTIL_NEXT_INTERPOLATE)      // At least 4ms until next interpolation.  See how this works...
@@ -1006,35 +1009,6 @@ void LSSServoDriver::WakeUpRoutine(void) {
 	if (g_WakeUpState) { //Check if all servos has reached their goal position
 		DBGSerial.println("Enter: LSSServoDriver::WakeUpRoutine"); DBGSerial.flush();
 		for (LegIndex = 0; LegIndex < CNT_LEGS; LegIndex++) {//for (LegIndex = CNT_LEGS / 2; LegIndex < CNT_LEGS; LegIndex++) {//Left legs
-
-			CurrentCoxaPos = GetServoPosition(cPinTable[FIRSTCOXAPIN + LegIndex]);
-			CurrentFemurPos = GetServoPosition(cPinTable[FIRSTFEMURPIN + LegIndex]);
-			CurrentTibiaPos = GetServoPosition(cPinTable[FIRSTTIBIAPIN + LegIndex]);
-
-
-			if ((abs((int)CurrentCoxaPos - (int)(CoxaAngle[LegIndex] )) > PosMargin) && (CurrentCoxaPos <= ServoRes) && (CurrentCoxaPos >= -ServoRes)) {
-				PosOK = false;
-			}
-			if ((abs((int)CurrentFemurPos - (int)(FemurAngle[LegIndex] )) > PosMargin) && (CurrentFemurPos <= ServoRes) && (CurrentFemurPos >= -ServoRes)) {
-				PosOK = false;
-			}
-			if ((abs((int)CurrentTibiaPos - (int)(TibiaAngle[LegIndex] )) > PosMargin) && (CurrentTibiaPos <= ServoRes) && (CurrentTibiaPos >= -ServoRes)) {
-				PosOK = false;
-			}
-#ifdef DEBUG_WakeUp_Pos
-			DBGSerial.print(CurrentCoxaPos, DEC);
-			DBGSerial.print("-");
-			DBGSerial.print((int)(CoxaAngle[LegIndex]), DEC);//must invert Right legs
-			DBGSerial.print(" ");
-			DBGSerial.print(CurrentFemurPos, DEC);
-			DBGSerial.print("-");
-			DBGSerial.print((int)(FemurAngle[LegIndex]), DEC);
-			DBGSerial.print(" ");
-			DBGSerial.print(CurrentTibiaPos, DEC);
-			DBGSerial.print("-");
-			DBGSerial.print((int)(TibiaAngle[LegIndex]), DEC);
-			DBGSerial.print(" _ ");
-#endif
 			delay(25);
 		}
 		//g_InputController.AllowControllerInterrupts(true);
@@ -1072,6 +1046,7 @@ void LSSServoDriver::WakeUpRoutine(void) {
 		}
 		DBGSerial.println("Exit: LSSServoDriver::WakeUpRoutine"); DBGSerial.flush();
 	}
+  g_WakeUpState = false;
 }
 
 //=============================================================================
@@ -1122,6 +1097,7 @@ void LSSServoDriver::TMSetTargetByIndex(uint8_t index, int16_t target) {
 	tmServos[index].starting_pos = tmServos[index].target_pos; // set source as last target
 	tmServos[index].target_pos = target;
 }
+
 void LSSServoDriver::TMSetupMove(uint32_t move_time) {
 	// BUGBUG should we output all servos every cycle?
 	// start off only when they move.
@@ -1162,7 +1138,7 @@ int  LSSServoDriver::TMStep(bool wait) {
 			}
 			if (next_pos != cur_pos) {
 				myLSS.setServoID(tmServos[servo].id);
-				myLSS.move(next_pos);
+				myLSS.move(next_pos * 10);
 				if (next_pos == tmServos[servo].target_pos) tmServos[servo].cycle_delta = 0; // servo done
 			}
 		}
