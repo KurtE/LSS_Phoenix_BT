@@ -189,6 +189,7 @@ void USBPSXController::Init(void)
 	_doubleTravelOn = true;//Zenta want this to start with
 	_bJoystickWalkMode = 0;
 	_delayedWalkMode = false;
+	g_InControlState.SpeedControl = 100;
 	MSound(1, 250, 500);//Some sound to indicate init is done
 }
 
@@ -382,6 +383,20 @@ void USBPSXController::ControlInput(void)
 			_fDynamicLegXZLength = false;
 			Serial.println("Ready for Action ........");
 		}
+		// add some speed control
+		if ((_buttons & BTN_MASKS[BUT_HAT_RIGHT]) && !(_buttons_prev & BTN_MASKS[BUT_HAT_RIGHT])) {
+        if (g_InControlState.SpeedControl>0) {
+          g_InControlState.SpeedControl = g_InControlState.SpeedControl - 50;
+          MSound( 1, 50, 2000);  
+        }
+		}
+		if ((_buttons & BTN_MASKS[BUT_HAT_LEFT]) && !(_buttons_prev & BTN_MASKS[BUT_HAT_LEFT])) {
+        if (g_InControlState.SpeedControl<2000 ) {
+          g_InControlState.SpeedControl = g_InControlState.SpeedControl + 50;
+          MSound( 1, 50, 2000); 
+        }
+		}
+
 
 		// We will use L1 with the Right joystick to control both body offset as well as Speed...
 		// We move each pass through this by a percentage of how far we are from center in each direction
@@ -482,6 +497,9 @@ void USBPSXController::ControlInput(void)
 				MSound(1, 50, 2000);
 				_heightSpeedMode = (_heightSpeedMode + 1) & 0x3; // wrap around mode
 				_doubleTravelOn = _heightSpeedMode & 0x1;
+				if (_doubleTravelOn) Serial.print("Double Travel On - ");
+				else Serial.print("Double Travel Off - ");
+
 				if (_heightSpeedMode & 0x2) {
 					g_InControlState.LegLiftHeight = 80;
 					Serial.println("Double Leg Height Selected .....");

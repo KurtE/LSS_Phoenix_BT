@@ -158,6 +158,54 @@ extern ST7789_t3 tft;
 #define cLRTibiaInv 0 
 #define cLMTibiaInv 0 
 #define cLFTibiaInv 0 
+//===================================================================
+// Define Servo Gyre (left side CCW, Right side CW)
+// Zenta LSS:
+// Zenta LSS:
+
+#define cRRCoxaOff	0
+#define cRMCoxaOff	0
+#define cRFCoxaOff  0 
+#define cLFCoxaOff  0 
+#define cLMCoxaOff  0 
+#define cLRCoxaOff  0
+
+#define cRRFemurOff -155 
+#define cRMFemurOff -157 
+#define cRFFemurOff -168 
+#define cLRFemurOff -232 
+#define cLMFemurOff -181 
+#define cLFFemurOff -169 
+
+#define cRRTibiaOff -172 
+#define cRMTibiaOff -192 
+#define cRFTibiaOff -174 
+#define cLRTibiaOff -162 
+#define cLMTibiaOff -180 
+#define cLFTibiaOff -168
+#define cRRCoxaGyre LSS_GyreCounterClockwise
+#define cRMCoxaGyre LSS_GyreCounterClockwise
+#define cRFCoxaGyre LSS_GyreCounterClockwise 
+#define cLFCoxaGyre LSS_GyreClockwise 
+#define cLMCoxaGyre LSS_GyreClockwise 
+#define cLRCoxaGyre LSS_GyreClockwise 
+
+#define cRRFemurGyre LSS_GyreCounterClockwise 
+#define cRMFemurGyre LSS_GyreCounterClockwise 
+#define cRFFemurGyre LSS_GyreCounterClockwise 
+#define cLRFemurGyre LSS_GyreClockwise 
+#define cLMFemurGyre LSS_GyreClockwise 
+#define cLFFemurGyre LSS_GyreClockwise 
+
+#define cRRTibiaGyre LSS_GyreCounterClockwise 
+#define cRMTibiaGyre LSS_GyreCounterClockwise 
+#define cRFTibiaGyre LSS_GyreCounterClockwise
+#define cLRTibiaGyre LSS_GyreClockwise 
+#define cLMTibiaGyre LSS_GyreClockwise 
+#define cLFTibiaGyre LSS_GyreClockwise
+
+#define cServoSpeed	 600
+
 #endif
 
 #ifdef MXPhoenix //Compared to the PhantomX MKI the Femur and Tibia must be reversed
