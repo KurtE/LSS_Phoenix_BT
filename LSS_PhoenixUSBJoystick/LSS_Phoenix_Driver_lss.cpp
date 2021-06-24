@@ -164,7 +164,7 @@ leg_info_t legs[] = {
 
 void ServoDriver::setGaitConfig()
 {
-	use_servos_timed_moves = true;
+	use_servos_timed_moves = false;
 	
 	for (uint8_t leg = 0; leg < COUNT_LEGS; leg++) {
 		legs[leg].leg_found = true;
@@ -175,17 +175,23 @@ void ServoDriver::setGaitConfig()
 		myLSS.setGyre(legs[leg].coxa.gyre, LSS_SetSession);
 		myLSS.setOriginOffset(legs[leg].coxa.offset, LSS_SetSession);
 #endif
-		myLSS.setMotionControlEnabled(1);
-		
+		myLSS.setMotionControlEnabled(0);
+		myLSS.setAngularHoldingStiffness(4, LSS_SetSession);
+		myLSS.setAngularStiffness(-4, LSS_SetSession);
+		myLSS.setFPC(5, LSS_SetSession);
+    		
 		myLSS.setServoID(legs[leg].femur.id);
 #ifndef USELSSCONFIG
 		if (myLSS.getStatus() == LSS_StatusUnknown) legs[leg].leg_found = false;
 		myLSS.setMaxSpeed(legs[leg].femur.max_speed, LSS_SetSession);
 		myLSS.setGyre(legs[leg].femur.gyre, LSS_SetSession);
 		myLSS.setOriginOffset(legs[leg].femur.offset, LSS_SetSession);
-		myLSS.setMotionControlEnabled(1);
 #endif
-
+		myLSS.setMotionControlEnabled(0);
+		myLSS.setAngularHoldingStiffness(4, LSS_SetSession);
+		myLSS.setAngularStiffness(-4, LSS_SetSession);
+		myLSS.setFPC(5, LSS_SetSession);
+    
 		myLSS.setServoID(legs[leg].tibia.id);
 #ifndef USELSSCONFIG
 		if (myLSS.getStatus() == LSS_StatusUnknown) legs[leg].leg_found = false;
@@ -193,7 +199,11 @@ void ServoDriver::setGaitConfig()
 		myLSS.setGyre(legs[leg].tibia.gyre, LSS_SetSession);
 		myLSS.setOriginOffset(legs[leg].tibia.offset, LSS_SetSession);
 #endif
-		myLSS.setMotionControlEnabled(1);
+		myLSS.setMotionControlEnabled(0);
+		myLSS.setAngularHoldingStiffness(4, LSS_SetSession);
+		myLSS.setAngularStiffness(-4, LSS_SetSession);
+		myLSS.setFPC(5, LSS_SetSession);
+    
 #ifndef USELSSCONFIG
 		if (legs[leg].leg_found) Serial.printf("Servos for Leg %s **found**\n", legs[leg].leg_name);
 		else Serial.printf("Servos for Leg %s **NOT found**\n", legs[leg].leg_name);
